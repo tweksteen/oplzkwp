@@ -1,0 +1,1 @@
+gcc -o present -Wl,-plugin=/home/tweek/src/binutils/ld/.libs/libldtestplug.so present.o
