@@ -1,5 +1,5 @@
 export CC=gcc
-export CFLAGS=-m32 -fPIE -ggdb3
+export CFLAGS=-m32 -fPIE
 
 %.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
@@ -11,6 +11,8 @@ all: oplzkwp
 
 oplzkwp: oplzkwp-naked encrypt
 	./encrypt
+	strip -K second_stage -K third_stage oplzkwp
+	setfattr -n "user.pax.flags" -v "m" oplzkwp 
 
 oplzkwp-naked: $(SUBDIRS) loader.o payload.o encrypt
 	gcc -m32 -o oplzkwp -pie blake/blake224.o present/decrypt.o elf/elf_raw.o loader.o payload.o 
@@ -23,8 +25,7 @@ $(SUBDIRS):
 	$(MAKE) -C $@
 
 clean:
-	$(MAKE) -C present clean
-	$(MAKE) -C blake clean
+	-for d in $(SUBDIRS); do (cd $$d; $(MAKE) clean ); done
 	rm *.o
 	rm encrypt
 	rm oplzkwp
