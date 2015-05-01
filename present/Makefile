@@ -1,5 +1,5 @@
-all: decrypt.o encrypt.o
+all: present.o
 
 clean:
-	rm *.o
+	@rm -f *.o
 

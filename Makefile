@@ -1,31 +1,42 @@
+export EXEC=oplzkwp
+export ANDROID_PLATFORM=android-19
 export CC=gcc
-export CFLAGS=-m32 -fPIE
+export CFLAGS=-m32 -fpic -Wall -std=gnu99 -DEXEC_NAME=\"${EXEC}\" -DDEBUG
 
-%.o: %.c
-	$(CC) -c -o $@ $< $(CFLAGS)
-
+# [!] loader.o must be first, payload.o must be last
+EXEC_OBJ=loader.o elf/elf_raw.o blake/blake224.o present/present.o payload.o
+ENCRYPT_OBJ=elf/elf_raw.o present/present.o blake/blake224.o encrypt.o
 SUBDIRS=elf blake present
+
 .PHONY: $(SUBDIRS)
+.SILENT: clean
 
-all: oplzkwp 
+all: $(EXEC)
 
-oplzkwp: oplzkwp-naked encrypt
+$(EXEC): $(EXEC)-naked encrypt
 	./encrypt
-	strip -K second_stage -K third_stage oplzkwp
-	setfattr -n "user.pax.flags" -v "m" oplzkwp 
+	strip -w -K _e_* $(EXEC)
+	setfattr -n "user.pax.flags" -v "m" $(EXEC)
 
-oplzkwp-naked: $(SUBDIRS) loader.o payload.o encrypt
-	gcc -m32 -o oplzkwp -pie blake/blake224.o present/decrypt.o elf/elf_raw.o loader.o payload.o 
-	setfattr -n "user.pax.flags" -v "m" oplzkwp 
+$(EXEC)-naked: $(SUBDIRS) $(EXEC_OBJ)
+	$(CC) -m32 -o $(EXEC) -pie $(EXEC_OBJ)
 
-encrypt: 
-	gcc -m32 -o encrypt encrypt.c elf/elf_raw.o present/encrypt.o blake/blake224.o
+encrypt: $(SUBDIRS) encrypt.o
+	$(CC) -m32 -o encrypt $(ENCRYPT_OBJ)
 
 $(SUBDIRS):
-	$(MAKE) -C $@
+	@$(MAKE) -C $@
 
 clean:
-	-for d in $(SUBDIRS); do (cd $$d; $(MAKE) clean ); done
-	rm *.o
-	rm encrypt
-	rm oplzkwp
+	@for d in $(SUBDIRS); do (cd $$d; $(MAKE) clean ); done
+	rm -f *.o
+	rm -f encrypt
+	rm -f $(EXEC)
+	rm -rf obj
+	rm -rf libs
+
+android: encrypt
+	ndk-build NDK_PROJECT_PATH=$(CURDIR) \
+					 	APP_BUILD_SCRIPT=$(CURDIR)/Android.mk \
+						APP_PLATFORM=$(ANDROID_PLATFORM)
+	./encrypt ./libs/armeabi/$(EXEC)

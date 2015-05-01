@@ -1,0 +1,23 @@
+# Description
+
+oplzkwp is a self-modifying library for ELF obfuscation. It uses PRESENT and 
+blake244 for encryption of the obfuscated code. Only the functions that are 
+currently executed are being decrypted. Both Linux and Android are supported.
+
+# Design
+
+# How To
+
+Modify payload.c to fit your needs. Constraints:
+
+ *  Each function starting with "_e_" will be encrypted and decrypted at 
+    run-time. This functions must not be re-entrant.
+
+ *  Use decrypt_and_call(next) to call another _e_ function.
+ 
+ *  Each functions needs to be page-aligned. 
+    (see payload.c and  __attribute__((aligned(PAGE_SIZE))).
+
+ *  The final executable must be compiled with -fpie (this is the default if 
+    using the Makefile provided).
+

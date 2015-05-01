@@ -1,5 +1,5 @@
 all: blake224.o
 
 clean:
-	rm *.o
+	@rm -f *.o
 

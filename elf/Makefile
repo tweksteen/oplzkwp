@@ -1,5 +1,5 @@
 all: elf_raw.o
 
 clean:
-	rm *.o
+	@rm -f *.o
 
