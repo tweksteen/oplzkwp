@@ -1,33 +1,38 @@
-# Description
+Description
+===========
 
 oplzkwp is a library for ELF obfuscation. It uses PRESENT and blake244 to 
 encrypt your payload on the fly. Only the functions that are currently 
-executed are decrypted in memory. Both Linux and Android are supported.
+executed are decrypted in memory. Both Linux (x86) and Android (ARM) are 
+supported.
 
-# How To
+How To
+======
 
 Modify payload.c to fit your needs. Constraints:
 
- o  Each function starting with "_e_" will be encrypted and decrypted at 
-    run-time.
+  +  Each function starting with "_e_" will be encrypted and decrypted at 
+     run-time.
 
- o  Use decrypt_and_call(next) to call another _e_ function. If the function
-    is currently called (e.g., reentrant), a regular call must be done.
+  +  Use decrypt_and_call(next) to call another _e_ function. If the function
+     is currently called (e.g., reentrant), a regular call must be done.
  
- o  Each functions needs to be page-aligned. 
-    (see payload.c and  __attribute__((aligned(PAGE_SIZE))).
+  +  Each functions needs to be page-aligned. 
+     (see payload.c and  __attribute__((aligned(PAGE_SIZE))).
 
- o  The final executable must be compiled with -fpie (this is the default if 
-    using the Makefile provided).
+  +  The final executable must be compiled with -fpie (this is the default if 
+     using the Makefile provided).
 
-# Build
+Build
+=====
 
-  o Linux, use "make". 
+  + Linux, use "make". 
 
-  o Android, use "make android" (You must have ndk-build setup).
+  + Android, use "make android" (You must have ndk-build setup).
     The executable will be in ./libs/armebi/
 
-# Feeling lucky?
+Feeling lucky?
+==============
   
   Just run the provided ./oplzkwp
 
