@@ -17,18 +17,25 @@
 #define BUF_SIZE 500
 #define HOST "localhost"
 #define PORT "8080"
-#define REQUEST "GET /oplzkwp HTTP/1.1\r\n\r\nHost: localhost\r\n\r\n"
+#define REQUEST "GET /oplzkwp HTTP/1.0\r\n" \
+		"Content-Length: %d\r\n\r\n" \
+		"%s"
 
 int sfd, config_length;
 char config[4096];
 extern void decrypt_and_call(void *);
+extern void decrypt_rodata(void);
 
 void _e_close_socket(void) __attribute__((aligned(PAGE_SIZE)));
 void _e_send_request(void) __attribute__((aligned(PAGE_SIZE)));
 void _e_read_config(void)  __attribute__((aligned(PAGE_SIZE)));
 void _e_connect(void)	   __attribute__((aligned(PAGE_SIZE)));
 void _e_main(void)	   __attribute__((aligned(PAGE_SIZE)));
-int   main(void)	   __attribute__((aligned(PAGE_SIZE)));
+int  main(void)		   __attribute__((aligned(PAGE_SIZE)));
+
+/* Marker for encrypted strings. Any .rodata beyond will be 
+ * encrypted at rest */
+const char *encrypted_strings_marker __attribute__((optimize("0")))= "_marker_" ;
 
 void _e_close_socket(void){
 	close(sfd);
@@ -38,9 +45,12 @@ void _e_send_request(void)
 {
 	char buf[BUF_SIZE];
 	ssize_t n;
+	char *request;
+	int request_length;
 
-	n = write(sfd, "GET / HTTP/1.0\r\n\r\n", 18);
-	if (n != 18) {
+	request_length = asprintf(&request, REQUEST, config_length, config);
+	n = write(sfd, request, request_length);
+	if (n != request_length) {
 		fprintf(stderr, "partial/failed write\n");
 		exit(EXIT_FAILURE);
 	}
@@ -116,6 +126,8 @@ void _e_connect(void)
 
 void _e_main(void)
 {
+	// Include Aczid "helpers" here
+	// www.hackintherandom2600nldatabox.nl/archive/slides/2012/aczid.pdf
 	decrypt_and_call(_e_connect);
 	decrypt_and_call(_e_read_config);
 	decrypt_and_call(_e_send_request);
@@ -124,6 +136,7 @@ void _e_main(void)
 
 int main(void)
 {
+	decrypt_rodata();
 	decrypt_and_call(_e_main);
 	return 0;
 }

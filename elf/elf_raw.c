@@ -19,7 +19,7 @@ static inline char *elf_lookup_sh_string(Elf32_Ehdr *hdr, int offset) {
   return shstrtab + offset;
 }
 
-static Elf32_Shdr *elf_section_by_name(Elf32_Ehdr *hdr, char *name) {
+Elf32_Shdr *elf_section_by_name(Elf32_Ehdr *hdr, char *name) {
   int i;
   for(i=0; i < hdr->e_shnum; i++) {
     if(!strcmp(elf_lookup_sh_string(hdr, elf_section(hdr, i)->sh_name), name))

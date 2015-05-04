@@ -36,7 +36,7 @@ clean:
 	rm -rf libs
 
 android: encrypt
-	ndk-build NDK_PROJECT_PATH=$(CURDIR) \
+	ndk-build V=1 NDK_PROJECT_PATH=$(CURDIR) \
 					 	APP_BUILD_SCRIPT=$(CURDIR)/Android.mk \
 						APP_PLATFORM=$(ANDROID_PLATFORM)
 	./encrypt ./libs/armeabi/$(EXEC)

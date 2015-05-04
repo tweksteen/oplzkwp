@@ -13,6 +13,7 @@
 #include "elf/elf_raw.h"
 
 #define LOG_PREFIX "[loader] "
+#define STRING_MARKER "_marker_"
 #define TEXT_OFFSET 0x1000    /* .text offset, maybe be confirmed via section
 				 info */
 
@@ -25,9 +26,9 @@
 extern void present_decrypt(uint64_t *, uint64_t *, uint16_t, uint64_t *);
 extern void present_encrypt(uint64_t *, uint64_t *, uint16_t, uint64_t *);
 extern void blake224_hash( uint8_t *, const uint8_t *, uint64_t);
-void marker(void) __attribute__((optimize("-O0")));
 
 void marker(void){};
+extern const char *encrypted_strings_marker;
 
 uint32_t get_fct_size(uint32_t offset)
 {
@@ -55,6 +56,59 @@ uint32_t get_fct_size(uint32_t offset)
 	munmap(ehdr, s.st_size);
 	close(fd);
 	return size;
+}
+
+void decrypt_rodata(void)
+{
+	char *b;
+	int fd, key_length;
+	struct stat s;
+	long page_size, blah;
+	uint32_t page_mask;
+	uint32_t rodata_esize, base_addr, current_addr, aligned_rodata,
+		 rodata_pages;
+	uint64_t key[4] = { [0 ... 3]  = 0x0 };
+	Elf32_Ehdr *ehdr;
+	Elf32_Shdr *rodata;
+
+	page_size = sysconf(_SC_PAGESIZE);
+	page_mask = ~ (page_size - 1);
+
+	fd = open("/proc/self/exe", O_RDONLY);
+	if(fd < 0){
+		 _log("[! /proc]\n");
+		exit(EXIT_FAILURE);
+	}
+
+	fstat(fd, &s);
+	ehdr = mmap(NULL, s.st_size, PROT_READ, MAP_SHARED, fd, 0);
+	rodata = elf_section_by_name(ehdr, ".rodata");
+
+	key_length = asprintf(&b, "[loader] %08x %08x",
+			      rodata->sh_offset, rodata->sh_size);
+	blake224_hash((uint8_t *)key, (uint8_t *)b, key_length);
+	free(b);
+
+	printf(LOG_PREFIX "rodata offset=%x size=%x keys=%llx:%llx\n",
+	       rodata->sh_offset, rodata->sh_size, key[0], key[1]);
+
+	base_addr = (((int) &marker & page_mask) - TEXT_OFFSET);
+	current_addr = (int)encrypted_strings_marker + sizeof(STRING_MARKER);
+	aligned_rodata = current_addr & page_mask;
+	rodata_pages = rodata->sh_size / page_size + 1;
+	rodata_esize = rodata->sh_size -
+		(current_addr - base_addr - rodata->sh_offset);
+	printf(LOG_PREFIX "rodata base_addr=%x current_addr=%x aligned_rodata=%x "
+		          "esize=%x pages=%x\n",
+	       base_addr, current_addr, aligned_rodata, rodata_esize,
+	       rodata_pages);
+	blah = mprotect((void *)aligned_rodata, rodata_pages,
+		 PROT_READ | PROT_WRITE | PROT_EXEC);
+	present_decrypt((uint64_t *)((char *)current_addr),
+		(uint64_t *)((char *)current_addr), (rodata_esize / 8), key);
+	mprotect((void *)aligned_rodata, rodata_pages, PROT_READ | PROT_EXEC);
+	munmap(ehdr, s.st_size);
+	close(fd);
 }
 
 void decrypt_and_call(void *stage)
@@ -87,7 +141,7 @@ void decrypt_and_call(void *stage)
 	}
 
 	blake224_hash((uint8_t *)key, b, key_length);
-	_log("opening @%x: size=%x pages=%x key=%llx:%llx\n",
+	_log("opening @%x size=%x pages=%x key=%llx:%llx\n",
 		stage_addr, stage_size, stage_pages, key[0], key[1]);
 	ret = mprotect((void *)aligned_stage_addr, stage_pages,
 		PROT_READ | PROT_WRITE);
@@ -103,7 +157,7 @@ void decrypt_and_call(void *stage)
 	fct();
 
 	blake224_hash((uint8_t *)key, b, key_length);
-	_log("closing @%x: size=%x pages=%x key=%llx:%llx\n",
+	_log("closing @%x size=%x pages=%x key=%llx:%llx\n",
 		stage_addr, stage_size, stage_pages, key[0], key[1]);
 	mprotect((void *)aligned_stage_addr, stage_pages,
 		 PROT_READ | PROT_WRITE);
