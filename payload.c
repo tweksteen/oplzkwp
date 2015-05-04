@@ -35,7 +35,7 @@ int  main(void)		   __attribute__((aligned(PAGE_SIZE)));
 
 /* Marker for encrypted strings. Any .rodata beyond will be 
  * encrypted at rest */
-const char *encrypted_strings_marker __attribute__((optimize("0")))= "_marker_" ;
+const char *encrypted_strings_marker = "_marker_" ;
 
 void _e_close_socket(void){
 	close(sfd);

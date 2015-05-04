@@ -63,7 +63,7 @@ void decrypt_rodata(void)
 	char *b;
 	int fd, key_length;
 	struct stat s;
-	long page_size, blah;
+	long page_size;
 	uint32_t page_mask;
 	uint32_t rodata_esize, base_addr, current_addr, aligned_rodata,
 		 rodata_pages;
@@ -102,7 +102,7 @@ void decrypt_rodata(void)
 		          "esize=%x pages=%x\n",
 	       base_addr, current_addr, aligned_rodata, rodata_esize,
 	       rodata_pages);
-	blah = mprotect((void *)aligned_rodata, rodata_pages,
+	mprotect((void *)aligned_rodata, rodata_pages,
 		 PROT_READ | PROT_WRITE | PROT_EXEC);
 	present_decrypt((uint64_t *)((char *)current_addr),
 		(uint64_t *)((char *)current_addr), (rodata_esize / 8), key);
