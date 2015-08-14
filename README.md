@@ -28,7 +28,3 @@ Modify payload.c to fit your needs. Constraints:
   + Android, use `make android` (You must have ndk-build setup).
     The executable will be in ./libs/armebi/
 
-# Feeling lucky?
-
-  Just run the provided `./oplzkwp`
-
